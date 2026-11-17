@@ -23,29 +23,29 @@
 # CELL ********************
 
 import re
+from pyspark.sql import functions as F
 
 def to_snake_case(name):
     s1 = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1_\2', name.strip())
     s2 = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s1)
     return re.sub(r'[^a-z0-9]+', '_', s2.lower()).strip('_')
 
-# Load environment variables from the Variable Library
 env_vars = notebookutils.variableLibrary.getLibrary("env_config")
-
-# Read with LIMIT 1000 in Dev/Test, and no limit in Prod
 df = spark.sql(f"SELECT * FROM dbo.publicholidays {env_vars.row_limit}")
 
-# Clean column names
-df_clean = df.toDF(*[to_snake_case(col) for col in df.columns])
+# Clean column names and add a new feature column: day_of_week
+df_clean = (
+    df.toDF(*[to_snake_case(col) for col in df.columns])
+      .withColumn("day_of_week", F.date_format(F.col("date"), "EEEE"))
+)
 
-# Write to Silver table in whichever Lakehouse is bound to the workspace
 df_clean.write \
     .format("delta") \
     .mode("overwrite") \
     .option("overwriteSchema", "true") \
     .saveAsTable("dbo.silver_public_holidays")
 
-print(f"Row count processed: {df_clean.count()}")
+display(spark.sql("SELECT date, day_of_week, holiday_name FROM dbo.silver_public_holidays LIMIT 10"))
 
 
 # METADATA ********************
