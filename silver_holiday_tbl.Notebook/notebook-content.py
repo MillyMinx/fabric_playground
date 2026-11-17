@@ -25,30 +25,27 @@
 import re
 
 def to_snake_case(name):
-    # Split acronyms followed by a capitalised word (e.g., "ISOFormat" -> "ISO_Format")
     s1 = re.sub(r'([A-Z]+)([A-Z][a-z])', r'\1_\2', name.strip())
-    # Split lowercase letters or numbers followed by an uppercase letter (e.g., "holidayName" -> "holiday_Name")
     s2 = re.sub(r'([a-z0-9])([A-Z])', r'\1_\2', s1)
-    # Replace spaces, hyphens, or symbols with a single underscore and lowercase everything
     return re.sub(r'[^a-z0-9]+', '_', s2.lower()).strip('_')
 
-# 1. Read from the raw/bronze sample table
-df = spark.sql("SELECT * FROM lakehouse_playground.dbo.publicholidays LIMIT 1000")
+# Load environment variables from the Variable Library
+env_vars = notebookutils.variableLibrary.getLibrary("env_config")
 
-# 2. Clean the column names dynamically
+# Read with LIMIT 1000 in Dev/Test, and no limit in Prod
+df = spark.sql(f"SELECT * FROM dbo.publicholidays {env_vars.row_limit}")
+
+# Clean column names
 df_clean = df.toDF(*[to_snake_case(col) for col in df.columns])
 
-# 3. Write to the Silver Delta table
+# Write to Silver table in whichever Lakehouse is bound to the workspace
 df_clean.write \
     .format("delta") \
     .mode("overwrite") \
     .option("overwriteSchema", "true") \
-    .saveAsTable("lakehouse_playground.dbo.silver_public_holidays")
+    .saveAsTable("dbo.silver_public_holidays")
 
-# 4. Verify the updated schema and data
-df_clean.printSchema()
-display(spark.sql("SELECT * FROM lakehouse_playground.dbo.silver_public_holidays LIMIT 10"))
-
+print(f"Row count processed: {df_clean.count()}")
 
 
 # METADATA ********************
