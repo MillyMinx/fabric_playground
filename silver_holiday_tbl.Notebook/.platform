@@ -1,0 +1,11 @@
+{
+  "$schema": "https://developer.microsoft.com/json-schemas/fabric/gitIntegration/platformProperties/2.0.0/schema.json",
+  "metadata": {
+    "type": "Notebook",
+    "displayName": "silver_holiday_tbl"
+  },
+  "config": {
+    "version": "2.0",
+    "logicalId": "7380cb3e-4a5d-a744-400a-571c7803f813"
+  }
+}
